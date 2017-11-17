@@ -22,48 +22,23 @@ enum WireColor {
   purple = 5
 }
 
-enum EnergyType {
-  red = 0,
-  orange,
-  yellow,
-  green,
-  blue,
-  purple
-}
-
-module EnergyType {
-
-  export function getValues() {
-    let names: string[] = []
-    for (const name in EnergyType) {
-      if (typeof EnergyType[name] === 'number') {
-        names.push(name)
-      }
-    }
-    return names
-  }
-
-}
-
-type WeaponId = number
-
-type SequenceToken = WireColor | '*' | 'x'
+type WeaponLevel = 0 | 1 | 2 | 3
 
 type Weapon = {
-  id: WeaponId
-  sequence: Array<SequenceToken>
+  level: WeaponLevel
+  wires: Array<WireColor>
   enabledMillis: number
   disabledMillis: number
 }
 
 interface Used {
   kind: 'used'
-  wire: number
+  wire: WireColor
 }
 
 interface Unused {
   kind: 'unused'
-  wire: number
+  wire: WireColor
 }
 
 interface Unplugged {
@@ -72,7 +47,7 @@ interface Unplugged {
 
 interface Disabled {
   kind: 'disabled'
-  wire: number
+  wire: WireColor
   expiration: number
 }
 
@@ -82,8 +57,7 @@ type Port = {
 }
 
 type ServerState = {
-  weaponId: WeaponId | null
-  energyId: EnergyType | null
+  weaponLevel: WeaponLevel
   isGameWon: boolean
   isGameLost: boolean
   isGameStarted: boolean
@@ -101,24 +75,17 @@ function colorName(color: WireColor) {
   }
 }
 
-function portUsedInWeapon(port: Port, weapon: Weapon, includeWildcard = false): boolean {
-  if (includeWildcard && weapon.sequence[port.id] === '*') {
-    return true
-  }
-  if (port.status.kind === 'unplugged') {
+function getPortsUsedInWeapon(ports: Array<Port>, weapon: Weapon): Array<Port> {
+  let usedColors: Array<WireColor> = []
+  return ports.filter((p: Port, i: number) => {
+    if (p.status.kind === 'used' || p.status.kind === 'unused') {
+      if (weapon.wires.includes(p.status.wire) && !usedColors.includes(p.status.wire)) {
+        usedColors.push(p.status.wire)
+        return true
+      }
+    }
     return false
-  }
-  if (port.status.kind === 'disabled') {
-    return false
-  }
-  return weapon.sequence[port.id] === port.status.wire
-}
-
-function activeWeapon(weapons: Array<Weapon>, ports: Array<Port>): Weapon | null {
-  const weaponMatchesPorts = (weapon: Weapon): boolean => (
-    ports.every(port => portUsedInWeapon(port, weapon, true))
-  )
-  return weapons.find(weaponMatchesPorts) || null
+  })
 }
 
 function fetchServer(path: string) {
@@ -137,20 +104,26 @@ function fetchServer(path: string) {
 
 const allWeapons: Array<Weapon> = [
   {
-    id: 0,
-    sequence: [0, 0, '*', '*', '*', '*'],
+    level: 0,
+    wires: [],
+    disabledMillis: 0,
+    enabledMillis: 0,
+  },
+  {
+    level: 1,
+    wires: [WireColor.red, WireColor.blue],
     disabledMillis: 3000,
     enabledMillis: 3000,
   },
   {
-    id: 1,
-    sequence: [3, '*', 3, '*', 4, '*'],
+    level: 2,
+    wires: [WireColor.red, WireColor.orange, WireColor.blue],
     disabledMillis: 3000,
     enabledMillis: 3000,
   },
   {
-    id: 2,
-    sequence: [1, '*', 1, 1, '*', 1],
+    level: 3,
+    wires: [WireColor.red, WireColor.orange, WireColor.yellow, WireColor.green, WireColor.blue, WireColor.purple],
     disabledMillis: 3000,
     enabledMillis: 3000,
   },
@@ -160,7 +133,6 @@ type AppState = {
   serverState: ServerState
   ports: Array<Port>
   isLoading: boolean
-  weapon: Weapon | null
 }
 
 class App extends React.Component<{}, AppState> {
@@ -169,11 +141,9 @@ class App extends React.Component<{}, AppState> {
       super(props)
       this.state = {
         ports: _.range(NUM_WIRES).map(i => ({id: i, status: {kind: 'unplugged'}} as Port)),
-        weapon: null,
         isLoading: true,
         serverState: {
-          weaponId: null,
-          energyId: null,
+          weaponLevel: 0,
           isGameWon: false,
           isGameLost: false,
           isGameStarted: false,
@@ -191,66 +161,70 @@ class App extends React.Component<{}, AppState> {
     .then(serverState => this.setState({serverState, isLoading: false}))
   }
 
-  weaponEnabledExpired(weapon: Weapon) {
-    console.log(`weapon with id ${weapon.id} expired`)
+  overheatPorts(portsToOverheat: Array<Port>, duration: number) {
     const ports = this.state.ports.map(port => {
-      if (portUsedInWeapon(port, weapon) && port.status.kind !== 'unplugged') {
+      if (port.status.kind !== 'unplugged' && portsToOverheat.includes(port)) {
         port.status = {
           kind: 'disabled',
-          expiration: Date.now() + weapon.disabledMillis,
+          expiration: Date.now() + duration,
           wire: port.status.wire
         }
       }
       return port
     })
+    this.setState({ports}, () => this.updatePorts())
+  }
+
+  updatePorts() {
+    // Does ANY port have a wire of this color plugged in?
+    const wireIsPluggedIn = (w: WireColor): boolean => (
+      this.state.ports.some(port => {
+        if (port.status.kind === 'unused') {
+          return port.status.wire === w
+        }
+        return false
+      })
+    )
+
+    // Get determine the highest active weapon level
+    const weapon = _.maxBy(
+      allWeapons.filter(weapon => weapon.wires.every(wireIsPluggedIn)),
+      weapon => weapon.level
+    )!
+
+    const portsUsedInWeapon = getPortsUsedInWeapon(this.state.ports, weapon)
+
+    // Mark ports used in weapon
+    const ports = this.state.ports.map(port => {
+      if (portsUsedInWeapon.includes(port)) {
+        port.status.kind = 'used'
+      }
+      return port
+    })
+
+    if (this.state.serverState.weaponLevel !== weapon.level) {
+      this.setWeaponLevel(weapon.level)
+      if (weapon.level > 0) {
+        setTimeout(() => this.overheatPorts(portsUsedInWeapon, weapon.disabledMillis), weapon.enabledMillis)
+      }
+    }
+
     this.setState({ports})
   }
 
   plugWireIntoPort(wire: WireColor | null, port: Port) {
-    // connect wire to port
-    let ports = this.state.ports.map(p => {
+    const ports = this.state.ports.map(p => {
       if (p.id === port.id) {
         p.status = wire === null ? {kind: 'unplugged'} : {kind: 'unused', wire}
       }
       return p
     })
 
-    // Determine new weapon (if any)
-    const weapon = activeWeapon(allWeapons, ports)
-    const weaponId = weapon ? weapon.id : null
-
-    // Include other ports in active weapon if needed
-    ports = ports.map((p: Port, i: number) => {
-      if (weapon && portUsedInWeapon(p, weapon)) {
-        p.status.kind = 'used'
-      }
-      return p
-    })
-
-    if (this.state.serverState.weaponId !== weaponId) {
-      if (weaponId === null) {
-        this.disableWeapon()
-      } else {
-        this.enableWeapon(weaponId)
-        setTimeout(() => this.weaponEnabledExpired(weapon!), weapon!.enabledMillis)
-      }
-    }
-
-    this.setState({ports, weapon})
+    this.setState({ports}, () => this.updatePorts())
   }
 
-  setEnergy(id: EnergyType) {
-    fetchServer(`energy/${id}`)
-    .then(state => this.setState(state))
-  }
-
-  enableWeapon(id: WeaponId) {
-    fetchServer(`weapon/enable/${id}`)
-    .then(state => this.setState(state))
-  }
-
-  disableWeapon() {
-    fetchServer(`weapon/disable`)
+  setWeaponLevel(level: WeaponLevel) {
+    fetchServer(`weapon/set/${level}`)
     .then(state => this.setState(state))
   }
 
@@ -275,6 +249,7 @@ class App extends React.Component<{}, AppState> {
         <div className="Bay">
           {ports.map((port) => (
             <div
+              key={port.id}
               className={`Port Wire-${port.status.kind === 'unplugged' ? 'none' : colorName(port.status.wire)}`}
               onClick={() => this.cycleWire(port)}
             >
@@ -285,29 +260,14 @@ class App extends React.Component<{}, AppState> {
       )
     }
 
-    // const currentSequence = this.state.ports.map(port => port.status.kind === 'unplugged' ? '' : port.status.wire)
-
-    const energyId = this.state.serverState.energyId
     return (
       <div className="App">
         <div className="Bays">
           {renderBay(this.state.ports.slice(0, NUM_WIRES / 2))}
           {renderBay(this.state.ports.slice(NUM_WIRES / 2, NUM_WIRES))}
-          <div className="Energy">
-            <div className="Energy-label">Energy </div>
-            <select
-              defaultValue={energyId === null ? '' : EnergyType[energyId]}
-              onChange={e => e.target.value !== '' && this.setEnergy(EnergyType[e.target.value] as EnergyType)}
-            >
-              <option value="" key=""/>
-              {EnergyType.getValues().map((name) => (
-                <option value={name} key={name}>{name}</option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
-    );
+    )
   }
 
 }
