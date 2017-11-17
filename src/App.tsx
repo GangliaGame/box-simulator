@@ -163,7 +163,7 @@ class App extends React.Component<{}, AppState> {
 
   overheatPorts(portsToOverheat: Array<Port>, duration: number) {
     const ports = this.state.ports.map(port => {
-      if (port.status.kind !== 'unplugged' && portsToOverheat.includes(port)) {
+      if (port.status.kind === 'used') {
         port.status = {
           kind: 'disabled',
           expiration: Date.now() + duration,
@@ -177,10 +177,10 @@ class App extends React.Component<{}, AppState> {
 
   updatePorts() {
     // Does ANY port have a wire of this color plugged in?
-    const wireIsPluggedIn = (w: WireColor): boolean => (
+    const wireIsPluggedIn = (wire: WireColor): boolean => (
       this.state.ports.some(port => {
         if (port.status.kind === 'unused') {
-          return port.status.wire === w
+          return port.status.wire === wire
         }
         return false
       })
@@ -198,6 +198,8 @@ class App extends React.Component<{}, AppState> {
     const ports = this.state.ports.map(port => {
       if (portsUsedInWeapon.includes(port)) {
         port.status.kind = 'used'
+      } else if (port.status.kind === 'used') {
+        port.status = { kind: 'unused', wire: port.status.wire}
       }
       return port
     })
@@ -215,7 +217,11 @@ class App extends React.Component<{}, AppState> {
   plugWireIntoPort(wire: WireColor | null, port: Port) {
     const ports = this.state.ports.map(p => {
       if (p.id === port.id) {
-        p.status = wire === null ? {kind: 'unplugged'} : {kind: 'unused', wire}
+        if (wire === null) {
+          p.status = { kind: 'unplugged' }
+        } else {
+          p.status = { kind: 'unused', wire }
+        }
       }
       return p
     })
