@@ -15,11 +15,11 @@ const SERVER_URL = (() =>
 
 enum WireColor {
   red = 0,
-  orange,
-  yellow,
-  green,
-  blue,
-  purple
+  orange = 1,
+  yellow = 2,
+  green = 3,
+  blue = 4,
+  purple = 5
 }
 
 enum EnergyType {
@@ -144,8 +144,14 @@ const allWeapons: Array<Weapon> = [
   },
   {
     id: 1,
-    sequence: [1, 2, '*', '*', 0, 0],
-    disabledMillis: 750,
+    sequence: [3, '*', 3, '*', 4, '*'],
+    disabledMillis: 3000,
+    enabledMillis: 3000,
+  },
+  {
+    id: 2,
+    sequence: [1, '*', 1, 1, '*', 1],
+    disabledMillis: 3000,
     enabledMillis: 3000,
   },
 ]
@@ -278,6 +284,8 @@ class App extends React.Component<{}, AppState> {
         </div>
       )
     }
+
+    // const currentSequence = this.state.ports.map(port => port.status.kind === 'unplugged' ? '' : port.status.wire)
 
     const energyId = this.state.serverState.energyId
     return (
