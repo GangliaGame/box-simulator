@@ -1,5 +1,6 @@
 import * as _ from 'lodash'
 import * as React from 'react'
+import * as io from 'socket.io-client'
 import './App.css'
 
 const NUM_WIRES = 6
@@ -7,7 +8,7 @@ const NUM_WIRES = 6
 const POLL_FREQUENCY = 1000 // ms
 const POLL_TIMEOUT = 1500 // ms
 
-const SERVER_URL = (() =>
+const BASE_URL = (() =>
   window.location.search.includes('local') ?
   'http://localhost:9000' :
   'https://ganglia-server.herokuapp.com'
@@ -91,11 +92,11 @@ function getPortsUsedInWeapon(ports: Array<Port>, weapon: Weapon): Array<Port> {
 function fetchServer(path: string) {
   function timeout(ms: number, promise: Promise<Response>) {
     return new Promise((resolve, reject) => {
-      setTimeout(() => reject(new Error('timeout')), ms)
+      window.setTimeout(() => reject(new Error('timeout')), ms)
       promise.then(resolve, reject)
     })
   }
-  return timeout(POLL_TIMEOUT, fetch(`${SERVER_URL}/${path}`))
+  return timeout(POLL_TIMEOUT, fetch(`${BASE_URL}/${path}`))
   .then((response: Response) => response.json())
   .catch((error: Object) => {
     console.error(error)
@@ -113,19 +114,19 @@ const allWeapons: Array<Weapon> = [
     level: 1,
     wires: [WireColor.red, WireColor.blue],
     disabledMillis: 3000,
-    enabledMillis: 3000,
+    enabledMillis: 5000,
   },
   {
     level: 2,
     wires: [WireColor.red, WireColor.orange, WireColor.blue],
     disabledMillis: 3000,
-    enabledMillis: 3000,
+    enabledMillis: 7000,
   },
   {
     level: 3,
     wires: [WireColor.red, WireColor.orange, WireColor.yellow, WireColor.green, WireColor.blue, WireColor.purple],
     disabledMillis: 3000,
-    enabledMillis: 3000,
+    enabledMillis: 5000,
   },
 ]
 
@@ -133,27 +134,33 @@ type AppState = {
   serverState: ServerState
   ports: Array<Port>
   isLoading: boolean
+  overHeatTimer: number | null
+  moveTimer: number | null
+  socket: SocketIOClient.Socket
 }
 
 class App extends React.Component<{}, AppState> {
 
   constructor(props: {}) {
-      super(props)
-      this.state = {
-        ports: _.range(NUM_WIRES).map(i => ({id: i, status: {kind: 'unplugged'}} as Port)),
-        isLoading: true,
-        serverState: {
-          weaponLevel: 0,
-          isGameWon: false,
-          isGameLost: false,
-          isGameStarted: false,
-        },
-      }
+    super(props)
+    this.state = {
+      ports: _.range(NUM_WIRES).map(i => ({id: i, status: {kind: 'unplugged'}} as Port)),
+      isLoading: true,
+      serverState: {
+        weaponLevel: 0,
+        isGameWon: false,
+        isGameLost: false,
+        isGameStarted: false,
+      },
+      moveTimer: null,
+      overHeatTimer: null,
+      socket: io(BASE_URL),
+    }
   }
 
   componentDidMount() {
     this.onPollTimer()
-    setInterval(this.onPollTimer.bind(this), POLL_FREQUENCY)
+    window.setInterval(this.onPollTimer.bind(this), POLL_FREQUENCY)
   }
 
   onPollTimer() {
@@ -204,14 +211,16 @@ class App extends React.Component<{}, AppState> {
       return port
     })
 
+    let overHeatTimer = null
+
     if (this.state.serverState.weaponLevel !== weapon.level) {
       this.setWeaponLevel(weapon.level)
       if (weapon.level > 0) {
-        setTimeout(() => this.overheatPorts(portsUsedInWeapon, weapon.disabledMillis), weapon.enabledMillis)
+        overHeatTimer = window.setTimeout(() => this.overheatPorts(portsUsedInWeapon, weapon.disabledMillis), weapon.enabledMillis)
       }
     }
 
-    this.setState({ports})
+    this.setState({ports, overHeatTimer})
   }
 
   plugWireIntoPort(wire: WireColor | null, port: Port) {
@@ -244,6 +253,21 @@ class App extends React.Component<{}, AppState> {
     }
   }
 
+  move(direction: 'up' | 'down') {
+    this.state.socket.emit(`move:${direction}`)
+  }
+
+  startMoving(direction: 'up' | 'down') {
+    this.setState({moveTimer: window.setInterval(() => this.move(direction), 10)})
+  }
+
+  stopMoving() {
+    if (this.state.moveTimer) {
+      window.clearInterval(this.state.moveTimer)
+      this.setState({moveTimer: null})
+    }
+  }
+
   render() {
     if (this.state.isLoading) {
       return 'loading'
@@ -268,6 +292,14 @@ class App extends React.Component<{}, AppState> {
 
     return (
       <div className="App">
+        <div className="Propulsion">
+        <div className="Propulsion-control"
+          onMouseDown={() => this.startMoving('up')}
+          onMouseUp={() => this.stopMoving()}>⬆️</div>
+        <div className="Propulsion-control"
+          onMouseDown={() => this.startMoving('down')}
+          onMouseUp={() => this.stopMoving()}>⬇️</div>
+        </div>
         <div className="Bays">
           {renderBay(this.state.ports.slice(0, NUM_WIRES / 2))}
           {renderBay(this.state.ports.slice(NUM_WIRES / 2, NUM_WIRES))}

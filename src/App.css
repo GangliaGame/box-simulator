@@ -11,6 +11,10 @@ html, body, #root, .App {
   overflow: hidden;
   background-color: black;
   color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /*flex-direction: column;*/
 }
 
 .GameNotStarted {
@@ -162,4 +166,21 @@ html, body, #root, .App {
 
 select {
   font-size: 18px;
+}
+
+.Propulsion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.Propulsion-control {
+  font-size: 75px;
+  margin-right: 50px;
+  transition: all 100ms ease-out;
+}
+
+.Propulsion-control:active {
+  font-size: 67px;
 }
