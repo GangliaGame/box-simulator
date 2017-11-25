@@ -294,9 +294,13 @@ class App extends React.Component<{}, AppState> {
       <div className="App">
         <div className="Propulsion">
         <div className="Propulsion-control"
+          onTouchStart={() => this.startMoving('up')}
+          onTouchEnd={() => this.stopMoving()}
           onMouseDown={() => this.startMoving('up')}
           onMouseUp={() => this.stopMoving()}>⬆️</div>
         <div className="Propulsion-control"
+          onTouchStart={() => this.startMoving('down')}
+          onTouchEnd={() => this.stopMoving()}
           onMouseDown={() => this.startMoving('down')}
           onMouseUp={() => this.stopMoving()}>⬇️</div>
         </div>
