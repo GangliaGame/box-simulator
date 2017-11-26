@@ -182,10 +182,12 @@ select {
   transition: all 100ms ease-out;
   width: 100%;
   cursor: pointer;
+  opacity: 0.7;
 }
 
 .Propulsion-control:active {
-  font-size: 67px;
+  /*font-size: 67px;*/
+  opacity: 1;
 }
 
 .LeftControls {
@@ -198,12 +200,12 @@ select {
 
   /*background-color: red;*/
   /*background-color: green;*/
-  margin-bottom: 25px;
+  /*margin-top: -25px;*/
 }
 
 .Shield {
-  width: 75px;
-  height: 75px;
+  width: 65px;
+  height: 65px;
   font-size: 50px;
   border-radius: 100%;
   display: flex;
@@ -247,4 +249,5 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
 }
