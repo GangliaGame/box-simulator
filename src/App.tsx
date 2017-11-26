@@ -266,6 +266,9 @@ class App extends React.Component<{}, AppState> {
   }
 
   startMoving(direction: 'up' | 'down') {
+    if (this.state.moveTimer) {
+      window.clearInterval(this.state.moveTimer)
+    }
     this.setState({moveTimer: window.setInterval(() => this.move(direction), 10)})
   }
 
@@ -297,7 +300,7 @@ class App extends React.Component<{}, AppState> {
           this.turnShield('off')
           readyAfter(10)
         },
-        4
+        4000
       )
       this.setState({shieldTimer, shieldStatus: 'active'})
     }
