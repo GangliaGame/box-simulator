@@ -14,6 +14,7 @@ html, body, #root, .App {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: 'Orbitron';
   /*flex-direction: column;*/
 }
 
@@ -78,6 +79,7 @@ html, body, #root, .App {
   align-items: center;
   justify-content: center;
   border: 4px solid #ddd;
+  cursor: pointer;
 }
 
 .Wire-red {
@@ -177,10 +179,71 @@ select {
 
 .Propulsion-control {
   font-size: 75px;
-  margin-right: 50px;
   transition: all 100ms ease-out;
+  width: 100%;
+  cursor: pointer;
 }
 
 .Propulsion-control:active {
   font-size: 67px;
+}
+
+.LeftControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  margin-right: 25px;
+  height: 100%;
+  /*background-color: red;*/
+  /*background-color: green;*/
+  margin-bottom: 25px;
+}
+
+.Shield {
+  width: 75px;
+  height: 75px;
+  font-size: 50px;
+  border-radius: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 8px solid white;
+  font-family: sans-serif;
+  cursor: pointer;
+  border-style: inset;
+}
+
+.Shield-status-ready {
+  border-color: #4fde4f;
+}
+
+.Shield-status-active {
+  border-color: #1e1eff;
+  animation: pulse 75ms infinite linear;
+}
+
+@keyframes pulse {
+  0% {
+    transform: rotateZ(0);
+  }
+  50% {
+  }
+  to {
+    transform: rotateZ(360deg);
+  }
+}
+
+.Shield-status-disabled {
+  border-color: red;
+}
+
+.Shield:hover {
+
+}
+
+.Controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

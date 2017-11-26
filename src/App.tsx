@@ -57,11 +57,14 @@ type Port = {
   status: Used | Unused | Unplugged | Disabled
 }
 
+type ShieldStatus = 'ready' | 'active' | 'disabled'
+
 type ServerState = {
   weaponLevel: WeaponLevel
   isGameWon: boolean
   isGameLost: boolean
   isGameStarted: boolean
+  isShieldActive: boolean
 }
 
 function colorName(color: WireColor) {
@@ -136,6 +139,8 @@ type AppState = {
   isLoading: boolean
   overHeatTimer: number | null
   moveTimer: number | null
+  shieldTimer: number | null
+  shieldStatus: ShieldStatus
   socket: SocketIOClient.Socket
 }
 
@@ -151,8 +156,11 @@ class App extends React.Component<{}, AppState> {
         isGameWon: false,
         isGameLost: false,
         isGameStarted: false,
+        isShieldActive: false,
       },
       moveTimer: null,
+      shieldStatus: 'ready',
+      shieldTimer: null,
       overHeatTimer: null,
       socket: io(BASE_URL),
     }
@@ -268,13 +276,47 @@ class App extends React.Component<{}, AppState> {
     }
   }
 
+  turnShield(condition: 'on' | 'off') {
+    fetchServer(`shield/${condition}`)
+    .then(state => this.setState(state))
+  }
+
+  onShieldClicked() {
+    const readyAfter = (seconds: number) => {
+      const shieldTimer = window.setTimeout(
+        () => this.setState({shieldStatus: 'ready'}),
+        seconds * 1000
+      )
+      this.setState({shieldTimer})
+    }
+    if (this.state.shieldStatus === 'ready') {
+      this.turnShield('on')
+      const shieldTimer = window.setTimeout(
+        () => {
+          this.setState({shieldStatus: 'disabled'})
+          this.turnShield('off')
+          readyAfter(10)
+        },
+        4
+      )
+      this.setState({shieldTimer, shieldStatus: 'active'})
+    }
+    else if (this.state.shieldStatus === 'active') {
+      this.turnShield('off')
+      if (this.state.shieldTimer) {
+        window.clearTimeout(this.state.shieldTimer)
+        this.setState({shieldStatus: 'disabled'})
+        readyAfter(5)
+      }
+    }
+  }
+
   render() {
     if (this.state.isLoading) {
       return 'loading'
     }
 
     const renderBay = (ports: Array<Port>) => {
-
       return (
         <div className="Bay">
           {ports.map((port) => (
@@ -292,21 +334,28 @@ class App extends React.Component<{}, AppState> {
 
     return (
       <div className="App">
-        <div className="Propulsion">
-        <div className="Propulsion-control"
-          onTouchStart={() => this.startMoving('up')}
-          onTouchEnd={() => this.stopMoving()}
-          onMouseDown={() => this.startMoving('up')}
-          onMouseUp={() => this.stopMoving()}>⬆️</div>
-        <div className="Propulsion-control"
-          onTouchStart={() => this.startMoving('down')}
-          onTouchEnd={() => this.stopMoving()}
-          onMouseDown={() => this.startMoving('down')}
-          onMouseUp={() => this.stopMoving()}>⬇️</div>
-        </div>
-        <div className="Bays">
-          {renderBay(this.state.ports.slice(0, NUM_WIRES / 2))}
-          {renderBay(this.state.ports.slice(NUM_WIRES / 2, NUM_WIRES))}
+        <div className="Controls">
+          <div className="LeftControls">
+            <div className="Propulsion">
+              <div className="Propulsion-control"
+                onTouchStart={() => this.startMoving('up')}
+                onTouchEnd={() => this.stopMoving()}
+                onMouseDown={() => this.startMoving('up')}
+                onMouseUp={() => this.stopMoving()}>⬆️</div>
+              <div className="Propulsion-control"
+                onTouchStart={() => this.startMoving('down')}
+                onTouchEnd={() => this.stopMoving()}
+                onMouseDown={() => this.startMoving('down')}
+                onMouseUp={() => this.stopMoving()}>⬇️</div>
+            </div>
+            <div
+              className={`Shield Shield-status-${this.state.shieldStatus}`}
+              onClick={() => this.onShieldClicked()}>S</div>
+          </div>
+          <div className="Bays">
+            {renderBay(this.state.ports.slice(0, NUM_WIRES / 2))}
+            {renderBay(this.state.ports.slice(NUM_WIRES / 2, NUM_WIRES))}
+          </div>
         </div>
       </div>
     )
