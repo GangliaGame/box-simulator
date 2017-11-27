@@ -207,9 +207,8 @@ class App extends React.Component<{}, AppState> {
       weapon => weapon.level
     )!
 
-    const portsUsedInWeapon = getPortsUsedInWeapon(this.state.ports, weapon)
-
     // Mark ports used in weapon
+    const portsUsedInWeapon = getPortsUsedInWeapon(this.state.ports, weapon)
     const ports = this.state.ports.map(port => {
       if (portsUsedInWeapon.includes(port)) {
         port.status.kind = 'used'
@@ -221,6 +220,7 @@ class App extends React.Component<{}, AppState> {
 
     let overHeatTimer = null
 
+    // Overheat
     if (this.state.serverState.weaponLevel !== weapon.level) {
       this.setWeaponLevel(weapon.level)
       if (weapon.level > 0) {
@@ -261,25 +261,11 @@ class App extends React.Component<{}, AppState> {
     }
   }
 
-  move(direction: 'up' | 'down') {
+  setMove(direction: 'up' | 'down' | 'stop') {
     this.state.socket.emit(`move:${direction}`)
   }
 
-  startMoving(direction: 'up' | 'down') {
-    if (this.state.moveTimer) {
-      window.clearInterval(this.state.moveTimer)
-    }
-    this.setState({moveTimer: window.setInterval(() => this.move(direction), 10)})
-  }
-
-  stopMoving() {
-    if (this.state.moveTimer) {
-      window.clearInterval(this.state.moveTimer)
-      this.setState({moveTimer: null})
-    }
-  }
-
-  turnShield(condition: 'on' | 'off') {
+  setShield(condition: 'on' | 'off') {
     fetchServer(`shield/${condition}`)
     .then(state => this.setState(state))
   }
@@ -293,11 +279,11 @@ class App extends React.Component<{}, AppState> {
       this.setState({shieldTimer})
     }
     if (this.state.shieldStatus === 'ready') {
-      this.turnShield('on')
+      this.setShield('on')
       const shieldTimer = window.setTimeout(
         () => {
           this.setState({shieldStatus: 'disabled'})
-          this.turnShield('off')
+          this.setShield('off')
           readyAfter(10)
         },
         4000
@@ -305,7 +291,7 @@ class App extends React.Component<{}, AppState> {
       this.setState({shieldTimer, shieldStatus: 'active'})
     }
     else if (this.state.shieldStatus === 'active') {
-      this.turnShield('off')
+      this.setShield('off')
       if (this.state.shieldTimer) {
         window.clearTimeout(this.state.shieldTimer)
         this.setState({shieldStatus: 'disabled'})
@@ -341,15 +327,15 @@ class App extends React.Component<{}, AppState> {
           <div className="LeftControls">
             <div className="Propulsion">
               <div className="Propulsion-control"
-                onTouchStart={() => this.startMoving('up')}
-                onTouchEnd={() => this.stopMoving()}
-                onMouseDown={() => this.startMoving('up')}
-                onMouseUp={() => this.stopMoving()}>⬆️</div>
+                onTouchStart={() => this.setMove('up')}
+                onTouchEnd={() => this.setMove('stop')}
+                onMouseDown={() => this.setMove('up')}
+                onMouseUp={() => this.setMove('stop')}>⬆️</div>
               <div className="Propulsion-control"
-                onTouchStart={() => this.startMoving('down')}
-                onTouchEnd={() => this.stopMoving()}
-                onMouseDown={() => this.startMoving('down')}
-                onMouseUp={() => this.stopMoving()}>⬇️</div>
+                onTouchStart={() => this.setMove('down')}
+                onTouchEnd={() => this.setMove('stop')}
+                onMouseDown={() => this.setMove('down')}
+                onMouseUp={() => this.setMove('stop')}>⬇️</div>
             </div>
             <div
               className={`Shield Shield-status-${this.state.shieldStatus}`}

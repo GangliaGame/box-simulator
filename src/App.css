@@ -241,10 +241,6 @@ select {
   border-color: red;
 }
 
-.Shield:hover {
-
-}
-
 .Controls {
   display: flex;
   align-items: center;
