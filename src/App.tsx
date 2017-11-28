@@ -41,7 +41,7 @@ class App extends React.Component<{}, AppState> {
   }
 
   fireWeapon() {
-    this.state.socket.emit('weapon', { fire: Date.now() })
+    this.state.socket.emit('fire')
   }
 
   setMovement(direction: 'up' | 'down' | 'stop') {
@@ -122,7 +122,6 @@ class App extends React.Component<{}, AppState> {
         </div>
       )
     }
-    // <pre style={{fontSize: 11, textAlign: 'left'}}>{JSON.stringify(this.state.wires, null, 2)}</pre>
 
     return (
       <div className="App">

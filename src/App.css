@@ -1,3 +1,10 @@
+@font-face {
+  font-family: 'DDC Hardware';
+  src: url('fonts/ddc-regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
 html, body, #root, .App {
   height: 100%;
 }
@@ -11,7 +18,8 @@ html, body, #root, .App {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Orbitron';
+  font-family: 'DDC Hardware';
+  user-select: none;
 }
 
 .Bays {
@@ -113,7 +121,6 @@ html, body, #root, .App {
 
 .Port-wire-label {
   color: white;
-  user-select: none;
 }
 
 .Port-status {
@@ -173,7 +180,7 @@ html, body, #root, .App {
 .FireButton {
   width: 60px;
   height: 60px;
-  font-size: 16px;
+  font-size: 20px;
   border-radius: 100%;
   margin-top: -10px;
   margin-left: 25px;
@@ -186,7 +193,6 @@ html, body, #root, .App {
   align-items: center;
   justify-content: center;
   border: 3px solid white;
-  user-select: none;
 }
 
 .FireButton:active {
@@ -212,7 +218,7 @@ html, body, #root, .App {
   margin: 7px;
   cursor: pointer;
   border: 3px solid white;
-  user-select: none;
+  lect: none;
 }
 
 .Move:active {
