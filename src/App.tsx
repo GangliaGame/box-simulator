@@ -176,7 +176,7 @@ class App extends React.Component<{}, AppState> {
             onWireRemoved={this.onWireRemoved.bind(this)}
           />
           <Bay
-            name="Communications"
+            name="Microphone"
             numPorts={1}
             wires={this.state.wires}
             onNewConfiguration={this.onNewCommunicationConfiguration.bind(this)}
